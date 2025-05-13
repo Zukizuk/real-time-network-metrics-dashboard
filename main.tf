@@ -6,3 +6,14 @@ module "s3" {
 module "kinesis" {
   source = "./module/kinesis"
 }
+
+module "cloudwatch" {
+  source = "./module/cloudwatch"
+}
+
+module "glue" {
+  source                 = "./module/glue"
+  stream_script_location = module.s3.stream_script_location
+  lake_bucket_name       = var.lake_bucket_name
+  stream_arn             = module.kinesis.stream_arn
+}

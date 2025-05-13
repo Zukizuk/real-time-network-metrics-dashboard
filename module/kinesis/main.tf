@@ -7,3 +7,7 @@ resource "aws_kinesis_stream" "my-stream" {
     stream_mode = "PROVISIONED"
   }
 }
+
+output "stream_arn" {
+  value = aws_kinesis_stream.my-stream.arn
+}
