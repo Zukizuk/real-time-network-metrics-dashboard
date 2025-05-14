@@ -17,3 +17,9 @@ module "glue" {
   lake_bucket_name = var.lake_bucket_name
   stream_arn       = module.kinesis.stream_arn
 }
+
+
+import {
+  to = aws_glue_job.MyStreamingJob
+  id = "transform-stream-data"
+}
