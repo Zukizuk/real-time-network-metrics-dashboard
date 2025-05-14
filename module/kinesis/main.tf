@@ -11,3 +11,4 @@ resource "aws_kinesis_stream" "my-stream" {
 output "stream_arn" {
   value = aws_kinesis_stream.my-stream.arn
 }
+

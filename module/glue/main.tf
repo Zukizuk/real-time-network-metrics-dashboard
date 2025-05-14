@@ -29,7 +29,8 @@ resource "aws_iam_role_policy" "glue_policy" {
         Action = [
           "s3:GetObject",
           "s3:PutObject",
-          "s3:ListBucket"
+          "s3:ListBucket",
+          "s3:DeleteObject"
         ]
         Resource = "arn:aws:s3:::*"
       },
@@ -58,11 +59,7 @@ resource "aws_iam_role_policy" "glue_policy" {
       {
         Effect = "Allow"
         Action = [
-          "kinesis:DescribeStream",
-          "kinesis:GetRecords",
-          "kinesis:GetShardIterator",
-          "kinesis:ListStreams",
-          "kinesis:DescribeStreamSummary"
+          "kinesis:*",
         ]
         Resource = "arn:aws:kinesis:*:*:stream/*"
       }
@@ -71,26 +68,28 @@ resource "aws_iam_role_policy" "glue_policy" {
 }
 
 
-resource "aws_glue_job" "streaming-job" {
-  name     = "transform-streams-job"
-  role_arn = aws_iam_role.glue_service_role.arn
-  command {
-    name            = "gluestreaming"
-    script_location = "s3://${var.lake_bucket_name}/${var.stream_script_location}"
-  }
+# resource "aws_glue_job" "streaming-job" {
+#   name     = "transform-streams-job"
+#   role_arn = aws_iam_role.glue_service_role.arn
+#   command {
+#     name            = "gluestreaming"
+#     script_location = "s3://${var.lake_bucket_name}/${var.stream_script_location}"
+#     python_version  = "3"
+#   }
 
-  default_arguments = {
-    "--window_size"                      = "60"
-    "--output_path"                      = "s3://${var.lake_bucket_name}/data/"
-    "--kinesis_stream_arn"               = var.stream_arn
-    "--enable-continuous-cloudwatch-log" = "true"
-    "--enable-continuous-log-filter"     = "true"
-    "--enable-metrics"                   = "true"
-    "--job-language"                     = "python"
-    "--TempDir"                          = "s3://${var.lake_bucket_name}/glue/tmp"
-  }
+#   default_arguments = {
+#     "--window_size"                      = "60"
+#     "--output_path"                      = "s3://${var.lake_bucket_name}/data/"
+#     "--kinesis_stream_arn"               = var.stream_arn
+#     "--enable-continuous-cloudwatch-log" = "true"
+#     "--enable-continuous-log-filter"     = "true"
+#     "--job-language"                     = "python"
+#     "--enable-metrics"                   = "true"
+#     "--job-language"                     = "python"
+#     "--TempDir"                          = "s3://${var.lake_bucket_name}/glue/tmp"
+#   }
 
-  glue_version      = "5.0"
-  worker_type       = "G.1X"
-  number_of_workers = 5
-}
+#   glue_version      = "5.0"
+#   worker_type       = "G.1X"
+#   number_of_workers = 2
+# }

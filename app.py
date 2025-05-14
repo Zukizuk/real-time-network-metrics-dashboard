@@ -15,7 +15,8 @@ STREAM_NAME = "metric-stream"  # <-- replace with your actual stream name
 
 def send_to_kinesis(data):
     # Use some field as partition key. If none is unique, generate a fallback.
-    partition_key = data.get("network", str(time.time()))
+    print(f"Sending data to Kinesis: {data}")
+    partition_key = data.get("network") or str(time.time())
     kinesis_client.put_record(
         StreamName=STREAM_NAME,
         Data=json.dumps(data),

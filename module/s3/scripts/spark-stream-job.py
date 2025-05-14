@@ -54,19 +54,20 @@ schema = StructType([
     StructField("postal_code", DoubleType(), True)
 ])
 
-# Create data source
+# Create data source using Spark Structured Streaming instead of DynamicFrame
 logger.info(f"Connecting to Kinesis stream: {args['kinesis_stream_arn']}")
 try:
-    kinesis_stream = glueContext.create_data_frame.from_options(
-        connection_type="kinesis",
-        connection_options={
-            "streamARN": args['kinesis_stream_arn'],
-            "classification": "json",
-            "startingPosition": "latest",
-            "inferSchema": "false"
-        },
-        transformation_ctx="kinesis_stream"
-    )
+    # Extract stream name from ARN
+    stream_name = args['kinesis_stream_arn'].split("/")[-1]
+    
+    kinesis_stream = spark.readStream \
+        .format("kinesis") \
+        .option("streamName", stream_name) \
+        .option("endpointUrl", "https://kinesis.us-east-1.amazonaws.com") \
+        .option("awsUseInstanceProfile", "true") \
+        .option("startingPosition", "latest") \
+        .load()
+    
     logger.info("Successfully connected to Kinesis stream.")
 except Exception as e:
     logger.error(f"Error connecting to Kinesis stream: {str(e)}")
@@ -74,9 +75,9 @@ except Exception as e:
 
 # Parse the JSON data with the defined schema
 logger.info("Parsing incoming Kinesis data...")
-parsed_df = kinesis_stream.select(
-    from_json(col("data").cast("string"), schema).alias("parsed_data")
-).select("parsed_data.*")
+parsed_df = kinesis_stream.selectExpr("CAST(data AS STRING) as json_data") \
+    .select(from_json("json_data", schema).alias("parsed_data")) \
+    .select("parsed_data.*")
 
 # Add processing timestamp column
 df_with_timestamp = parsed_df.withColumn(
@@ -91,6 +92,10 @@ df_with_partitions = df_with_timestamp \
     .withColumn("day", dayofmonth("processing_time")) \
     .withColumn("hour", hour("processing_time")) \
     .withColumn("postal_code_str", col("postal_code").cast("string"))
+
+# Add watermark to handle late data
+df_with_watermark = df_with_partitions \
+    .withWatermark("processing_time", "1 minute")
 
 # Write raw data to Parquet with partitioning
 raw_data_path = f"{args['output_path']}/raw"
@@ -111,7 +116,7 @@ except Exception as e:
     raise
 
 # KPI 1: Average Signal Strength per Operator
-avg_signal_df = df_with_partitions \
+avg_signal_df = df_with_watermark \
     .groupBy("operator", "year", "month", "day", "hour") \
     .agg(avg("signal").alias("avg_signal_strength"))
 
@@ -120,20 +125,22 @@ logger.info(f"Writing signal strength data to: {avg_signal_path}")
 
 try:
     query_signal = avg_signal_df \
-        .writeStream \
-        .format("parquet") \
-        .partitionBy("year", "month", "day", "hour", "operator") \
-        .option("checkpointLocation", f"{avg_signal_path}/_checkpoints") \
-        .option("path", avg_signal_path) \
-        .trigger(processingTime=f"{args['window_size']} seconds") \
-        .start()
+    .writeStream \
+    .outputMode("update") \
+    .format("parquet") \
+    .partitionBy("year", "month", "day", "hour", "operator") \
+    .option("checkpointLocation", f"{avg_signal_path}/_checkpoints") \
+    .option("path", avg_signal_path) \
+    .trigger(processingTime=f"{args['window_size']} seconds") \
+    .start()
+
     logger.info(f"Signal strength writing started successfully to {avg_signal_path}.")
 except Exception as e:
     logger.error(f"Error writing signal strength data: {str(e)}")
     raise
 
 # KPI 2: Average GPS Precision per Operator
-avg_gps_df = df_with_partitions \
+avg_gps_df = df_with_watermark \
     .groupBy("operator", "year", "month", "day", "hour") \
     .agg(avg("precission").alias("avg_gps_precision"))
 
@@ -142,20 +149,22 @@ logger.info(f"Writing GPS precision data to: {avg_gps_path}")
 
 try:
     query_gps = avg_gps_df \
-        .writeStream \
-        .format("parquet") \
-        .partitionBy("year", "month", "day", "hour", "operator") \
-        .option("checkpointLocation", f"{avg_gps_path}/_checkpoints") \
-        .option("path", avg_gps_path) \
-        .trigger(processingTime=f"{args['window_size']} seconds") \
-        .start()
+    .writeStream \
+    .outputMode("update") \
+    .format("parquet") \
+    .partitionBy("year", "month", "day", "hour", "operator") \
+    .option("checkpointLocation", f"{avg_gps_path}/_checkpoints") \
+    .option("path", avg_gps_path) \
+    .trigger(processingTime=f"{args['window_size']} seconds") \
+    .start()
+
     logger.info(f"GPS precision writing started successfully to {avg_gps_path}.")
 except Exception as e:
     logger.error(f"Error writing GPS precision data: {str(e)}")
     raise
 
 # KPI 3: Count of Network Statuses per Postal Code
-status_count_df = df_with_partitions \
+status_count_df = df_with_watermark \
     .groupBy("postal_code_str", "description", "year", "month", "day", "hour") \
     .count() \
     .withColumnRenamed("count", "status_count")
@@ -165,13 +174,15 @@ logger.info(f"Writing network status data to: {status_count_path}")
 
 try:
     query_status = status_count_df \
-        .writeStream \
-        .format("parquet") \
-        .partitionBy("year", "month", "day", "hour", "postal_code_str") \
-        .option("checkpointLocation", f"{status_count_path}/_checkpoints") \
-        .option("path", status_count_path) \
-        .trigger(processingTime=f"{args['window_size']} seconds") \
-        .start()
+    .writeStream \
+    .outputMode("update") \
+    .format("parquet") \
+    .partitionBy("year", "month", "day", "hour", "postal_code_str") \
+    .option("checkpointLocation", f"{status_count_path}/_checkpoints") \
+    .option("path", status_count_path) \
+    .trigger(processingTime=f"{args['window_size']} seconds") \
+    .start()
+
     logger.info(f"Network status writing started successfully to {status_count_path}.")
 except Exception as e:
     logger.error(f"Error writing network status data: {str(e)}")
@@ -180,10 +191,7 @@ except Exception as e:
 # Wait for all queries to terminate
 logger.info("Waiting for all streams to terminate...")
 try:
-    query_raw.awaitTermination()
-    query_signal.awaitTermination()
-    query_gps.awaitTermination()
-    query_status.awaitTermination()
+    spark.streams.awaitAnyTermination()  # Better approach than waiting on individual queries
     logger.info("All queries completed successfully.")
 except Exception as e:
     logger.error(f"Error during stream termination: {str(e)}")
