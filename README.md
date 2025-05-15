@@ -4,19 +4,7 @@ This project implements a Streamlit dashboard for visualizing real-time network 
 
 ## Architecture Overview
 
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌─────────────┐
-│ AWS Kinesis │────▶│ AWS Glue     │────▶│ S3 Data Lake│────▶│ AWS Athena  │
-│ Data Stream │     │ (Spark Jobs) │     │             │     │ (SQL Query) │
-└─────────────┘     └──────────────┘     └─────────────┘     └──────┬──────┘
-                                                                    │
-                                                                    ▼
-                                                            ┌───────────────┐
-                                                            │ Streamlit     │
-                                                            │ Dashboard     │
-                                                            │ (AWS ECS)     │
-                                                            └───────────────┘
-```
+![Architecture Diagram](assets/images/Architecture.png)
 
 ## Features
 
@@ -29,12 +17,39 @@ This project implements a Streamlit dashboard for visualizing real-time network 
 - **Responsive design** with interactive charts and tables
 - **AWS-native** integration with Athena for data querying
 
-## Dashboard Components
+## Project Structure
 
-1. **Network Performance Overview** - Summary metrics and KPIs
-2. **Operator Performance Metrics** - Bar charts for signal strength and GPS precision
-3. **Hourly Metrics Evolution** - Time series charts showing performance over time
-4. **Network Status by Postal Code** - Stacked bar charts and detailed data tables
+```
+project-9/
+├── app/                     # Application code
+│   ├── dashboard.py         # Streamlit dashboard implementation
+├── assets/                  # Static assets
+│   └── images/              # Architecture and dashboard images
+├── data/                    # Sample data files
+├── docs/                    # Documentation
+├── module/                  # Terraform modules for AWS resources
+│   ├── ecs/                 # ECS module
+│   ├── s3/                  # S3 module
+│   ├── glue/                # Glue module
+│   ├── kinesis/             # Kinesis module
+│   └── vpc/                 # VPC module
+├── notebooks/               # Jupyter notebooks for data exploration
+├── problem/                 # Problem statement and related files
+├── scripts/                 # Utility scripts
+├── Dockerfile               # Docker configuration
+├── terraform.tf             # Terraform configuration
+└── README.md                # Project documentation
+```
+
+## Core Technologies
+
+- **Streamlit**: Interactive web application framework for the dashboard
+- **AWS ECS**: Hosting the dashboard as a containerized application
+- **AWS Athena**: Querying data from the S3 data lake
+- **AWS Glue**: ETL jobs for processing streaming data
+- **AWS Kinesis**: Real-time data streaming
+- **Terraform**: Infrastructure as Code (IaC) for AWS resource provisioning
+- **Docker**: Containerization for local development and deployment
 
 ## Deployment Instructions
 
@@ -44,6 +59,46 @@ This project implements a Streamlit dashboard for visualizing real-time network 
 - AWS CLI configured with access keys
 - Docker and Docker Compose installed
 - S3 bucket for Athena query results
+
+## Terraform Setup
+
+This project uses Terraform to provision AWS resources. Follow these steps to set up the infrastructure:
+
+1. **Initialize Terraform:**
+
+   ```bash
+   terraform init
+   ```
+
+2. **Validate the Configuration:**
+
+   ```bash
+   terraform validate
+   ```
+
+3. **Plan the Deployment:**
+
+   ```bash
+   terraform plan
+   ```
+
+4. **Apply the Configuration:**
+
+   ```bash
+   terraform apply
+   ```
+
+   Confirm the changes when prompted. This will create the necessary AWS resources.
+
+5. **Destroy the Infrastructure (if needed):**
+
+   ```bash
+   terraform destroy
+   ```
+
+   This will remove all resources created by Terraform.
+
+---
 
 ### Local Development
 
@@ -105,22 +160,6 @@ This project implements a Streamlit dashboard for visualizing real-time network 
              "containerPort": 8501,
              "hostPort": 8501,
              "protocol": "tcp"
-           }
-         ],
-         "environment": [
-           {
-             "name": "AWS_REGION",
-             "value": "us-east-1"
-           }
-         ],
-         "secrets": [
-           {
-             "name": "AWS_ACCESS_KEY_ID",
-             "valueFrom": "arn:aws:ssm:your-region:your-account-id:parameter/telcopulse/aws-access-key-id"
-           },
-           {
-             "name": "AWS_SECRET_ACCESS_KEY",
-             "valueFrom": "arn:aws:ssm:your-region:your-account-id:parameter/telcopulse/aws-secret-access-key"
            }
          ],
          "logConfiguration": {
@@ -218,3 +257,15 @@ The AWS role used for this dashboard requires the following permissions:
 - **Connection Issues**: Ensure your AWS credentials have the appropriate permissions
 - **Missing Data**: Verify that your Athena tables are populated and the partitions are correctly formatted
 - **Performance Issues**: Consider optimizing your Athena queries or increasing the refresh interval
+
+📝 **License**
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+👥 **Contributing**
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+📧 **Contact**
+
+For any questions or concerns, please open an issue in the repository.
