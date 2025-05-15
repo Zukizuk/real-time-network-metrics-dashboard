@@ -41,7 +41,7 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
           "s3:GetBucketLocation"
         ]
         Resource = [
-          "arn:aws:s3:::*",
+          "*",
         ]
       },
       {
@@ -60,7 +60,7 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ],
-        "Resource" : "arn:aws:logs:eu-west-1:*"
+        "Resource" : "*"
       }
     ]
   })
@@ -77,7 +77,7 @@ resource "aws_ecs_task_definition" "telcopulse-task" {
   container_definitions = jsonencode([
     {
       "name" : "telcopulse-dashboard",
-      "image" : "${var.account_id}.dkr.ecr.eu-west-1.amazonaws.com/telcopulse-dashboard:latest",
+      "image" : "${var.account_id}.dkr.ecr.eu-west-1.amazonaws.com/telcopulse-dashboard:2",
       "essential" : true,
       "portMappings" : [
         {
