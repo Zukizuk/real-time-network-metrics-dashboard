@@ -1,6 +1,7 @@
 module "s3" {
   source           = "./module/s3"
   lake_bucket_name = var.lake_bucket_name
+  account_id       = var.account_id
 }
 
 module "vpc" {
@@ -19,6 +20,7 @@ module "glue" {
   source           = "./module/glue"
   lake_bucket_name = var.lake_bucket_name
   stream_arn       = module.kinesis.stream_arn
+  account_id       = var.account_id
 }
 
 module "ecr" {
@@ -35,4 +37,9 @@ module "ecs" {
 import {
   to = aws_glue_job.MyStreamingJob
   id = "transform-stream-data"
+}
+
+import {
+  to = aws_s3_bucket.glue_bucket
+  id = "aws-glue-assets-${var.account_id}-eu-west-1"
 }
