@@ -5,7 +5,7 @@
 resource "aws_glue_job" "MyStreamingJob" {
   connections = []
   default_arguments = {
-    "--TempDir"                      = "s3://aws-glue-assets-448049788660-eu-west-1/temporary/"
+    "--TempDir"                      = "s3://aws-glue-assets-${var.account_id}-eu-west-1/temporary/"
     "--enable-glue-datacatalog"      = "true"
     "--enable-job-insights"          = "true"
     "--enable-metrics"               = "true"
@@ -14,7 +14,7 @@ resource "aws_glue_job" "MyStreamingJob" {
     "--extra-py-files"               = "s3://aws-glue-studio-transforms-244479516193-prod-eu-west-1/gs_common.py,s3://aws-glue-studio-transforms-244479516193-prod-eu-west-1/gs_null_rows.py"
     "--job-bookmark-option"          = "job-bookmark-disable"
     "--job-language"                 = "python"
-    "--spark-event-logs-path"        = "s3://aws-glue-assets-448049788660-eu-west-1/sparkHistoryLogs/"
+    "--spark-event-logs-path"        = "s3://aws-glue-assets-${var.account_id}-eu-west-1/sparkHistoryLogs/"
   }
   description               = null
   execution_class           = "STANDARD"
@@ -26,7 +26,7 @@ resource "aws_glue_job" "MyStreamingJob" {
   max_retries               = 0
   name                      = "transform-stream-data"
   non_overridable_arguments = {}
-  role_arn                  = "arn:aws:iam::448049788660:role/glue_service_role"
+  role_arn                  = "arn:aws:iam::${var.account_id}:role/glue_service_role"
   security_configuration    = null
   tags                      = {}
   tags_all                  = {}
@@ -35,7 +35,7 @@ resource "aws_glue_job" "MyStreamingJob" {
     name            = "gluestreaming"
     python_version  = "3"
     runtime         = null
-    script_location = "s3://aws-glue-assets-448049788660-eu-west-1/scripts/transform-stream-data.py"
+    script_location = "s3://aws-glue-assets-${var.account_id}-eu-west-1/scripts/transform-stream-data.py"
   }
   execution_property {
     max_concurrent_runs = 1

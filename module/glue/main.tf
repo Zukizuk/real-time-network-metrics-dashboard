@@ -69,6 +69,6 @@ resource "aws_glue_crawler" "processed_crawler" {
   role          = aws_iam_role.glue_service_role.arn
   database_name = aws_glue_catalog_database.my_catalog_database.name
   s3_target {
-    path = "${var.lake_bucket_name}/processed/"
+    path = "s3://${var.lake_bucket_name}/processed/"
   }
 }
